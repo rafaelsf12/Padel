@@ -1,0 +1,171 @@
+<!-- ... existing code ... -->
+        <!-- Player Add/Edit Modal -->
+        <div id="player-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+            <div class="bg-gray-800 border border-gray-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                <div class="flex items-center justify-between pb-3 border-b border-gray-700">
+                    <h3 id="modal-title" class="font-bold text-lg text-white">Adicionar Novo Jogador</h3>
+                    <button onclick="closePlayerModal()" class="text-gray-400 hover:text-white p-1 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+                <form id="player-form" onsubmit="handlePlayerSubmit(event)" class="space-y-4">
+                    <input type="hidden" id="player-id">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1">Nome do Jogador</label>
+                        <input type="text" id="player-name" required placeholder="Ex: Gonçalo Ramos" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-padel-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1">Nível / Categoria</label>
+                        <select id="player-level" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-padel-500">
+                            <option value="Iniciado">Iniciado</option>
+                            <option value="Intermédio" selected>Intermédio</option>
+                            <option value="Avançado">Avançado</option>
+                            <option value="Pro">Pro / Competição</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4 border-t border-gray-700">
+                        <button type="button" onclick="closePlayerModal()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm font-medium px-4 py-2.5 rounded-xl transition">Cancelar</button>
+                        <button type="submit" class="bg-padel-600 hover:bg-padel-500 text-white text-sm font-medium px-5 py-2.5 rounded-xl shadow-lg shadow-padel-600/20 transition">Guardar Jogador</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Custom Notification Toast -->
+<!-- ... existing code ... -->
+        // --- State Management & LocalStorage ---
+        const STORAGE_KEY = 'padel_amigos_data_v1';
+        
+        let appState = {
+            players: [
+                { id: 'p1', name: 'João Silva', level: 'Intermédio' },
+                { id: 'p2', name: 'Miguel Santos', level: 'Avançado' },
+                { id: 'p3', name: 'Diogo Costa', level: 'Iniciado' },
+                { id: 'p4', name: 'Gonçalo Ramos', level: 'Avançado' }
+            ],
+            activeGames: [],
+            history: [],
+            gameMode: 'livre', // 'livre' ou 'americano'
+            selectedLivrePlayers: [],
+            selectedAmericanoPlayers: []
+        };
+
+        function loadData() {
+<!-- ... existing code ... -->
+        // --- Streamlined Player Management ---
+        function openPlayerModal(playerId = null) {
+            const modal = document.getElementById('player-modal');
+            const form = document.getElementById('player-form');
+            form.reset();
+            document.getElementById('player-id').value = '';
+
+            if (playerId) {
+                document.getElementById('modal-title').innerText = 'Editar Jogador';
+                const player = appState.players.find(p => p.id === playerId);
+                if (player) {
+                    document.getElementById('player-id').value = player.id;
+                    document.getElementById('player-name').value = player.name;
+                    document.getElementById('player-level').value = player.level;
+                }
+            } else {
+                document.getElementById('modal-title').innerText = 'Adicionar Novo Jogador';
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closePlayerModal() {
+            document.getElementById('player-modal').classList.add('hidden');
+        }
+
+        function handlePlayerSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('player-id').value;
+            const name = document.getElementById('player-name').value.trim();
+            const level = document.getElementById('player-level').value;
+
+            if (!name) return;
+
+            if (id) {
+                const p = appState.players.find(item => item.id === id);
+                if (p) {
+                    p.name = name;
+                    p.level = level;
+                    showToast('Jogador atualizado com sucesso!');
+                }
+            } else {
+                const newPlayer = {
+                    id: 'p_' + Math.random().toString(36).substr(2, 9),
+                    name,
+                    level
+                };
+                appState.players.push(newPlayer);
+                // Adicionar automaticamente às seleções se houver espaço
+                if (!appState.selectedLivrePlayers.includes(newPlayer.id) && appState.selectedLivrePlayers.length < 4) {
+                    appState.selectedLivrePlayers.push(newPlayer.id);
+                }
+                appState.selectedAmericanoPlayers.push(newPlayer.id);
+                showToast('Jogador adicionado com sucesso!');
+            }
+
+            saveData();
+            closePlayerModal();
+            renderPlayers();
+        }
+
+        function deletePlayer(id) {
+<!-- ... existing code ... -->
+        function renderPlayers() {
+            const container = document.getElementById('players-container');
+            document.getElementById('player-count-badge').innerText = `${appState.players.length} jogadores`;
+
+            if (appState.players.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-gray-500">
+                        <i data-lucide="users" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                        <p class="text-base font-medium">Ainda sem jogadores registados.</p>
+                        <p class="text-xs text-gray-600 mt-1">Clique em "Adicionar Jogador" para começar.</p>
+                    </div>`;
+                lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = appState.players.map(p => {
+                const stats = getPlayerStats(p.id);
+                const levelColor = p.level === 'Pro' ? 'bg-purple-950 text-purple-300 border-purple-800' :
+                                   p.level === 'Avançado' ? 'bg-amber-950 text-amber-300 border-amber-800' :
+                                   p.level === 'Intermédio' ? 'bg-blue-950 text-blue-300 border-blue-800' : 'bg-gray-700 text-gray-300 border-gray-600';
+
+                return `
+                    <div class="bg-gray-900/60 border border-gray-700/80 rounded-xl p-4 flex flex-col justify-between space-y-3 hover:border-gray-600 transition">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h4 class="font-bold text-white text-base">${escapeHtml(p.name)}</h4>
+                                <div class="flex items-center space-x-2 mt-1">
+                                    <span class="text-xs px-2 py-0.5 rounded-full border ${levelColor}">${p.level}</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <button onclick="openPlayerModal('${p.id}')" class="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                                <button onclick="deletePlayer('${p.id}')" class="p-1.5 text-gray-400 hover:text-red-400 rounded-lg hover:bg-gray-800"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-gray-800 text-center text-xs">
+                            <div class="bg-gray-800/60 p-1.5 rounded-lg">
+                                <span class="block text-gray-400">Jogos</span>
+                                <span class="font-bold text-white">${stats.matches}</span>
+                            </div>
+                            <div class="bg-gray-800/60 p-1.5 rounded-lg">
+                                <span class="block text-gray-400">Vitórias</span>
+                                <span class="font-bold text-padel-400">${stats.wins}</span>
+                            </div>
+                            <div class="bg-gray-800/60 p-1.5 rounded-lg">
+                                <span class="block text-gray-400">Pontos</span>
+                                <span class="font-bold text-amber-400">${stats.points}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        // --- Sorteio & Torneio Logic ---
+<!-- ... existing code ... -->
