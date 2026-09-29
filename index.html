@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Padel Amigos - Gestão</title>
+    <!-- Tailwind CSS para o design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons para os ícones -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        padel: { 400: '#34d399', 500: '#10b981', 600: '#059669' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .tab-active { border-bottom: 2px solid #10b981; color: #10b981; }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-200 font-sans min-h-screen">
+    
+    <!-- Cabeçalho & Menu -->
+    <header class="bg-gray-900 border-b border-gray-800 p-4 sticky top-0 z-10">
+        <div class="max-w-3xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold text-white flex items-center gap-2">
+                <i data-lucide="dribbble" class="text-padel-500"></i> Padel Amigos
+            </h1>
+        </div>
+        <div class="max-w-3xl mx-auto flex mt-4 overflow-x-auto">
+            <button onclick="switchTab('tab-jogadores')" id="btn-tab-jogadores" class="px-4 py-2 text-sm font-medium whitespace-nowrap tab-active">Jogadores</button>
+            <button onclick="switchTab('tab-jogos')" id="btn-tab-jogos" class="px-4 py-2 text-sm font-medium whitespace-nowrap text-gray-400">Jogos & Sorteios</button>
+            <button onclick="switchTab('tab-ranking')" id="btn-tab-ranking" class="px-4 py-2 text-sm font-medium whitespace-nowrap text-gray-400">Ranking</button>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto p-4 pb-20">
+        
+        <!-- SECÇÃO: Jogadores -->
+        <section id="tab-jogadores" class="space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-bold text-white">Plantel (<span id="player-count-badge">0</span>)</h2>
+                <button onclick="openPlayerModal()" class="bg-padel-600 hover:bg-padel-500 text-white text-sm px-4 py-2 rounded-lg flex items-center gap-2 transition">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Adicionar
+                </button>
+            </div>
+            <!-- Lista de Jogadores -->
+            <div id="players-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+        </section>
+
+        <!-- SECÇÃO: Jogos & Sorteios -->
+        <section id="tab-jogos" class="space-y-6 hidden">
+            <!-- Painel de Criação de Jogo -->
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-white">Criar Nova Partida</h3>
+                    <span class="text-xs bg-padel-950 text-padel-400 border border-padel-800 px-2 py-0.5 rounded-full font-medium">Melhor de 5 vitórias</span>
+                </div>
+                <div>
+                    <button onclick="openSelectGroupModal()" class="w-full bg-padel-600 hover:bg-padel-500 text-white py-3 rounded-xl font-medium flex justify-center items-center gap-2 transition shadow-lg shadow-padel-600/20 text-sm">
+                        <i data-lucide="users" class="w-4 h-4"></i> Selecionar Grupo e Sortear Jogo
+                    </button>
+                </div>
+            </div>
+            
+            <div>
+                <h3 class="font-bold text-white mb-3">Partidas a Decorrer (Contagem Padel: 15, 30, 40)</h3>
+                <div id="active-games-container" class="space-y-4"></div>
+            </div>
+            
+            <div>
+                <h3 class="font-bold text-white mb-3 mt-8">Histórico de Resultados</h3>
+                <div id="history-container" class="space-y-3 opacity-90"></div>
+            </div>
+        </section>
+
+        <!-- SECÇÃO: Ranking -->
+        <section id="tab-ranking" class="hidden space-y-4">
+            <h2 class="text-lg font-bold text-white">Tabela Classificativa Geral</h2>
+            <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-800 text-gray-400 border-b border-gray-700">
+                        <tr>
+                            <th class="p-3">#</th>
+                            <th class="p-3">Jogador</th>
+                            <th class="p-3 text-center" title="Jogos Realizados">J</th>
+                            <th class="p-3 text-center" title="Vitórias">V</th>
+                            <th class="p-3 text-center" title="Derrotas">D</th>
+                            <th class="p-3 text-center" title="Jogos / Sets Ganhos">Jogos (Sets)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ranking-container" class="divide-y divide-gray-800">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL: Adicionar/Editar Jogador -->
+    <div id="player-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4 transition-opacity">
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-700">
+                <h3 id="modal-title" class="font-bold text-lg text-white">Adicionar Novo Jogador</h3>
+                <button onclick="closePlayerModal()" class="text-gray-400 hover:text-white p-1 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form id="player-form" onsubmit="handlePlayerSubmit(event)" class="space-y-4">
+                <input type="hidden" id="player-id">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Nome do Jogador</label>
+                    <input type="text" id="player-name" required placeholder="Ex: Gonçalo Ramos" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-padel-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Nível / Categoria</label>
+                    <select id="player-level" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-padel-500 transition">
+                        <option value="Iniciado">Iniciado</option>
+                        <option value="Intermédio">Intermédio</option>
+                        <option value="Avançado">Avançado</option>
+                        <option value="Pro">Pro / Competição</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-700">
+                    <button type="button" onclick="closePlayerModal()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm font-medium px-4 py-2.5 rounded-xl transition">Cancelar</button>
+                    <button type="submit" class="bg-padel-600 hover:bg-padel-500 text-white text-sm font-medium px-5 py-2.5 rounded-xl shadow-lg shadow-padel-600/20 transition">Guardar Jogador</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Editar Resultado do Histórico -->
+    <div id="history-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4 transition-opacity">
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-700">
+                <h3 class="font-bold text-lg text-white">Editar Resultado da Partida</h3>
+                <button onclick="closeHistoryModal()" class="text-gray-400 hover:text-white p-1 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form id="history-form" onsubmit="handleHistorySubmit(event)" class="space-y-4">
+                <input type="hidden" id="edit-history-id">
+                
+                <div class="bg-gray-900 p-3 rounded-xl border border-gray-700 space-y-3 text-sm">
+                    <div>
+                        <span class="block text-xs text-padel-400 font-bold mb-1">EQUIPA 1</span>
+                        <div id="edit-t1-names" class="text-white font-medium"></div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1">Sets Ganhos Equipa 1</label>
+                        <input type="number" id="edit-s1" min="0" max="5" required class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-padel-500">
+                    </div>
+                </div>
+
+                <div class="bg-gray-900 p-3 rounded-xl border border-gray-700 space-y-3 text-sm">
+                    <div>
+                        <span class="block text-xs text-blue-400 font-bold mb-1">EQUIPA 2</span>
+                        <div id="edit-t2-names" class="text-white font-medium"></div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1">Sets Ganhos Equipa 2</label>
+                        <input type="number" id="edit-s2" min="0" max="5" required class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-padel-500">
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-700">
+                    <button type="button" onclick="closeHistoryModal()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm font-medium px-4 py-2.5 rounded-xl transition">Cancelar</button>
+                    <button type="submit" class="bg-padel-600 hover:bg-padel-500 text-white text-sm font-medium px-5 py-2.5 rounded-xl shadow-lg shadow-padel-600/20 transition">Atualizar Resultado</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Selecionar Grupo para Sorteio -->
+    <div id="select-group-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4 transition-opacity">
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-700">
+                <h3 class="font-bold text-lg text-white">Selecionar Jogadores Presentes</h3>
+                <button onclick="closeSelectGroupModal()" class="text-gray-400 hover:text-white p-1 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <p class="text-xs text-gray-400">Seleciona pelo menos 4 jogadores disponíveis. A aplicação vai sortear aleatoriamente entre eles para montar as duplas:</p>
+            
+            <div id="group-players-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto pr-1"></div>
+
+            <div class="flex justify-end space-x-3 pt-4 border-t border-gray-700">
+                <button type="button" onclick="closeSelectGroupModal()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm font-medium px-4 py-2.5 rounded-xl transition">Cancelar</button>
+                <button type="button" onclick="sortearDoGrupoSelecionado()" class="bg-padel-600 hover:bg-padel-500 text-white text-sm font-medium px-5 py-2.5 rounded-xl shadow-lg shadow-padel-600/20 transition">Sortear Jogo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICAÇÕES (Toast) -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-5 py-2.5 rounded-xl shadow-2xl transition-opacity duration-300 opacity-0 pointer-events-none z-50 border border-gray-700 font-medium text-sm">
+        <span id="toast-msg"></span>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'padel_amigos_data_v7';
+        
+        let appState = {
+            players: [
+                { id: 'p1', name: 'Rafael Ferreira', level: 'Avançado' },
+                { id: 'p2', name: 'Diogo Carvalho', level: 'Intermédio' },
+                { id: 'p3', name: 'Sérgio', level: 'Intermédio' },
+                { id: 'p4', name: 'João Paulo', level: 'Intermédio' }
+            ],
+            activeGames: [],
+            history: []
+        };
+
+        function loadData() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                try {
+                    const parsed = JSON.parse(data);
+                    if (parsed.players) appState.players = parsed.players;
+                    if (parsed.activeGames) appState.activeGames = parsed.activeGames;
+                    if (parsed.history) appState.history = parsed.history;
+                } catch (e) {
+                    console.error('Erro ao ler dados guardados:', e);
+                }
+            }
+            renderAll();
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+            renderAll();
+        }
+
+        function renderAll() {
+            renderPlayers();
+            renderGames();
+            renderRanking();
+            lucide.createIcons();
+        }
+
+        function escapeHtml(unsafe) {
+            if(!unsafe) return '';
+            return unsafe.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('opacity-0');
+            setTimeout(() => toast.classList.add('opacity-0'), 2500);
+        }
+
+        function switchTab(tabId) {
+            ['tab-jogadores', 'tab-jogos', 'tab-ranking'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+                document.getElementById('btn-' + id).classList.remove('tab-active', 'text-padel-500');
+                document.getElementById('btn-' + id).classList.add('text-gray-400');
+            });
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById('btn-' + tabId).classList.remove('text-gray-400');
+            document.getElementById('btn-' + tabId).classList.add('tab-active');
+        }
+
+        function getPlayerStats(playerId) {
+            let matches = 0, wins = 0, losses = 0, points = 0;
+            appState.history.forEach(game => {
+                const isT1 = game.t1.includes(playerId);
+                const isT2 = game.t2.includes(playerId);
+                if (isT1 || isT2) {
+                    matches++;
+                    const won = (isT1 && game.s1 > game.s2) || (isT2 && game.s2 > game.s1);
+                    const lost = (isT1 && game.s1 < game.s2) || (isT2 && game.s2 < game.s1);
+                    if (won) wins++;
+                    if (lost) losses++;
+                    points += isT1 ? parseInt(game.s1||0) : parseInt(game.s2||0);
+                }
+            });
+            return { matches, wins, losses, points };
+        }
+
+        // --- Gestão de Jogadores ---
+        function openPlayerModal(playerId = null) {
+            const modal = document.getElementById('player-modal');
+            const form = document.getElementById('player-form');
+            form.reset();
+            document.getElementById('player-id').value = '';
+
+            if (playerId) {
+                document.getElementById('modal-title').innerText = 'Editar Jogador';
+                const player = appState.players.find(p => p.id === playerId);
+                if (player) {
+                    document.getElementById('player-id').value = player.id;
+                    document.getElementById('player-name').value = player.name;
+                    document.getElementById('player-level').value = player.level;
+                }
+            } else {
+                document.getElementById('modal-title').innerText = 'Adicionar Novo Jogador';
+                document.getElementById('player-level').value = 'Intermédio';
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closePlayerModal() {
+            document.getElementById('player-modal').classList.add('hidden');
+        }
+
+        function handlePlayerSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('player-id').value;
+            const name = document.getElementById('player-name').value.trim();
+            const level = document.getElementById('player-level').value;
+
+            if (!name) return;
+
+            if (id) {
+                const p = appState.players.find(item => item.id === id);
+                if (p) {
+                    p.name = name;
+                    p.level = level;
+                    showToast('Jogador atualizado com sucesso!');
+                }
+            } else {
+                const newPlayer = {
+                    id: 'p_' + Math.random().toString(36).substr(2, 9),
+                    name,
+                    level
+                };
+                appState.players.push(newPlayer);
+                showToast('Jogador adicionado com sucesso!');
+            }
+
+            saveData();
+            closePlayerModal();
+        }
+
+        function deletePlayer(id) {
+            if(confirm('Tem a certeza que deseja remover este jogador?')) {
+                appState.players = appState.players.filter(p => p.id !== id);
+                saveData();
+                showToast('Jogador removido!');
+            }
+        }
+
+        function renderPlayers() {
+            const container = document.getElementById('players-container');
+            document.getElementById('player-count-badge').innerText = `${appState.players.length} jogadores`;
+
+            if (appState.players.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-gray-500">
+                        <i data-lucide="users" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                        <p class="text-base font-medium">Ainda sem jogadores registados.</p>
+                        <p class="text-xs text-gray-600 mt-1">Clique em "Adicionar" para começar.</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = appState.players.map(p => {
+                const stats = getPlayerStats(p.id);
+                const levelColor = p.level === 'Pro' ? 'bg-purple-950 text-purple-300 border-purple-800' :
+                                   p.level === 'Avançado' ? 'bg-amber-950 text-amber-300 border-amber-800' :
+                                   p.level === 'Intermédio' ? 'bg-blue-950 text-blue-300 border-blue-800' : 'bg-gray-700 text-gray-300 border-gray-600';
+
+                return `
+                    <div class="bg-gray-900/60 border border-gray-700/80 rounded-xl p-4 flex flex-col justify-between space-y-3 hover:border-gray-600 transition">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h4 class="font-bold text-white text-base">${escapeHtml(p.name)}</h4>
+                                <div class="flex items-center space-x-2 mt-1">
+                                    <span class="text-xs px-2 py-0.5 rounded-full border ${levelColor}">${p.level}</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <button onclick="openPlayerModal('${p.id}')" class="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                                <button onclick="deletePlayer('${p.id}')" class="p-1.5 text-gray-400 hover:text-red-400 rounded-lg hover:bg-gray-800 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-gray-800 text-center text-xs">
+                            <div class="bg-gray-800/60 p-1.5 rounded-lg">
+                                <span class="block text-gray-400">Jogos</span>
+                                <span class="font-bold text-white">${stats.matches}</span>
+                            </div>
+                            <div class="bg-gray-800/60 p-1.5 rounded-lg">
+                                <span class="block text-gray-400">Vitórias</span>
+                                <span class="font-bold text-padel-400">${stats.wins}</span>
+                            </div>
+                            <div class="bg-gray-800/60 p-1.5 rounded-lg">
+                                <span class="block text-gray-400">Ganhos</span>
+                                <span class="font-bold text-amber-400">${stats.points}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- Lógica de Sorteio ---
+        function getPlayerName(id) {
+            const p = appState.players.find(x => x.id === id);
+            return p ? p.name : 'Desconhecido';
+        }
+
+        function openSelectGroupModal() {
+            if (appState.players.length < 4) {
+                alert("Precisas de pelo menos 4 jogadores registados para realizar um sorteio.");
+                return;
+            }
+            
+            const container = document.getElementById('group-players-container');
+            container.innerHTML = appState.players.map(p => `
+                <label class="flex items-center space-x-2 bg-gray-900 p-2.5 rounded-xl border border-gray-700 text-sm cursor-pointer hover:border-gray-500">
+                    <input type="checkbox" name="group_player" value="${p.id}" checked class="rounded bg-gray-800 border-gray-600 text-padel-500 focus:ring-0">
+                    <span class="text-white font-medium truncate">${escapeHtml(p.name)}</span>
+                </label>
+            `).join('');
+
+            document.getElementById('select-group-modal').classList.remove('hidden');
+        }
+
+        function closeSelectGroupModal() {
+            document.getElementById('select-group-modal').classList.add('hidden');
+        }
+
+        function sortearDoGrupoSelecionado() {
+            const checked = Array.from(document.querySelectorAll('input[name="group_player"]:checked')).map(el => el.value);
+
+            if (checked.length < 4) {
+                alert("Deves selecionar pelo menos 4 jogadores para o sorteio.");
+                return;
+            }
+
+            let shuffled = [...checked].sort(() => 0.5 - Math.random());
+            let selected = shuffled.slice(0, 4);
+
+            closeSelectGroupModal();
+            criarPartidaComJogadores(selected);
+        }
+
+        function criarPartidaComJogadores(selectedIds) {
+            const newGame = {
+                id: 'game_' + Date.now(),
+                date: new Date().toISOString(),
+                t1: [selectedIds[0], selectedIds[1]],
+                t2: [selectedIds[2], selectedIds[3]],
+                s1: 0, 
+                s2: 0, 
+                p1Index: 0, 
+                p2Index: 0
+            };
+            
+            appState.activeGames.push(newGame);
+            saveData();
+            showToast("Sorteio realizado com sucesso!");
+        }
+
+        // --- Gestão de Histórico (Editar / Eliminar) ---
+        function openHistoryModal(gameId) {
+            const game = appState.history.find(g => g.id === gameId);
+            if (!game) return;
+
+            document.getElementById('edit-history-id').value = game.id;
+            document.getElementById('edit-t1-names').innerText = `${getPlayerName(game.t1[0])} & ${getPlayerName(game.t1[1])}`;
+            document.getElementById('edit-t2-names').innerText = `${getPlayerName(game.t2[0])} & ${getPlayerName(game.t2[1])}`;
+            document.getElementById('edit-s1').value = game.s1;
+            document.getElementById('edit-s2').value = game.s2;
+
+            document.getElementById('history-modal').classList.remove('hidden');
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('history-modal').classList.add('hidden');
+        }
+
+        function handleHistorySubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-history-id').value;
+            const s1 = parseInt(document.getElementById('edit-s1').value);
+            const s2 = parseInt(document.getElementById('edit-s2').value);
+
+            const game = appState.history.find(g => g.id === id);
+            if (game) {
+                game.s1 = s1;
+                game.s2 = s2;
+                saveData();
+                closeHistoryModal();
+                showToast("Resultado atualizado com sucesso!");
+            }
+        }
+
+        function deleteHistoryGame(gameId) {
+            if (confirm("Tens a certeza que pretendes eliminar este registo do histórico?")) {
+                appState.history = appState.history.filter(g => g.id !== gameId);
+                saveData();
+                showToast("Registo eliminado com sucesso!");
+            }
+        }
+
+        // --- Lógica de Padel (Pontuação e Jogos) ---
+        const pointNames = ['0', '15', '30', '40', 'Ad'];
+
+        function addPoint(gameId, team) {
+            const g = appState.activeGames.find(x => x.id === gameId);
+            if (!g) return;
+
+            let p1 = g.p1Index;
+            let p2 = g.p2Index;
+
+            if (team === 1) {
+                if (p1 < 3) {
+                    p1++;
+                } else if (p1 === 3) {
+                    if (p2 < 3) {
+                        g.s1++;
+                        g.p1Index = 0; g.p2Index = 0;
+                    } else if (p2 === 3) {
+                        p1 = 4;
+                    } else if (p2 === 4) {
+                        p2 = 3;
+                    }
+                } else if (p1 === 4) {
+                    g.s1++;
+                    g.p1Index = 0; g.p2Index = 0;
+                }
+            } else {
+                if (p2 < 3) {
+                    p2++;
+                } else if (p2 === 3) {
+                    if (p1 < 3) {
+                        g.s2++;
+                        g.p1Index = 0; g.p2Index = 0;
+                    } else if (p1 === 3) {
+                        p2 = 4;
+                    } else if (p1 === 4) {
+                        p1 = 3;
+                    }
+                } else if (p2 === 4) {
+                    g.s2++;
+                    g.p1Index = 0; g.p2Index = 0;
+                }
+            }
+
+            if (p1 !== 0 || p2 !== 0 || g.p1Index !== 0) {
+                g.p1Index = p1;
+                g.p2Index = p2;
+            }
+
+            if (g.s1 >= 5 || g.s2 >= 5) {
+                saveData();
+                finishGameAutomatically(g.id);
+                return;
+            }
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+            renderGames();
+        }
+
+        function resetPoints(gameId) {
+            const g = appState.activeGames.find(x => x.id === gameId);
+            if (g) {
+                g.p1Index = 0;
+                g.p2Index = 0;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+                renderGames();
+            }
+        }
+
+        function finishGame(gameId) {
+            const idx = appState.activeGames.findIndex(x => x.id === gameId);
+            if(idx > -1) {
+                appState.history.unshift(appState.activeGames[idx]);
+                appState.activeGames.splice(idx, 1);
+                saveData();
+                showToast("Partida concluída e guardada no histórico!");
+            }
+        }
+
+        function finishGameAutomatically(gameId) {
+            const idx = appState.activeGames.findIndex(x => x.id === gameId);
+            if(idx > -1) {
+                appState.history.unshift(appState.activeGames[idx]);
+                appState.activeGames.splice(idx, 1);
+                saveData();
+                showToast("Fim do jogo! Equipa atingiu 5 vitórias.");
+            }
+        }
+
+        function renderGames() {
+            const activeContainer = document.getElementById('active-games-container');
+            if (appState.activeGames.length === 0) {
+                activeContainer.innerHTML = `<div class="text-gray-500 text-sm italic text-center py-4">Nenhuma partida a decorrer. Cria uma partida em cima.</div>`;
+            } else {
+                activeContainer.innerHTML = appState.activeGames.map(g => {
+                    const textP1 = g.p1Index === 4 ? 'AD' : pointNames[g.p1Index] || '0';
+                    const textP2 = g.p2Index === 4 ? 'AD' : pointNames[g.p2Index] || '0';
+                    
+                    return `
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 shadow-xl space-y-4">
+                            <div class="flex justify-between items-center text-xs text-gray-400 border-b border-gray-800 pb-2">
+                                <span>Sets Ganhos (Melhor de 5): <strong class="text-white text-sm">${g.s1} - ${g.s2}</strong></span>
+                                <button onclick="resetPoints('${g.id}')" class="hover:text-white underline">Reiniciar Pontos</button>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <!-- Equipa 1 -->
+                                <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-3 flex flex-col justify-between space-y-3">
+                                    <div>
+                                        <div class="text-xs text-padel-400 font-bold mb-1">EQUIPA 1</div>
+                                        <div class="text-sm font-bold text-white truncate">${escapeHtml(getPlayerName(g.t1[0]))}</div>
+                                        <div class="text-sm font-bold text-white truncate">${escapeHtml(getPlayerName(g.t1[1]))}</div>
+                                    </div>
+                                    <div class="flex items-center justify-between pt-2 border-t border-gray-700">
+                                        <span class="text-2xl font-black text-padel-400">${textP1}</span>
+                                        <button onclick="addPoint('${g.id}', 1)" class="bg-padel-600 hover:bg-padel-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition active:scale-95 shadow">
+                                            + Ponto T1
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Equipa 2 -->
+                                <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-3 flex flex-col justify-between space-y-3">
+                                    <div>
+                                        <div class="text-xs text-blue-400 font-bold mb-1">EQUIPA 2</div>
+                                        <div class="text-sm font-bold text-white truncate">${escapeHtml(getPlayerName(g.t2[0]))}</div>
+                                        <div class="text-sm font-bold text-white truncate">${escapeHtml(getPlayerName(g.t2[1]))}</div>
+                                    </div>
+                                    <div class="flex items-center justify-between pt-2 border-t border-gray-700">
+                                        <span class="text-2xl font-black text-blue-400">${textP2}</span>
+                                        <button onclick="addPoint('${g.id}', 2)" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition active:scale-95 shadow">
+                                            + Ponto T2
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button onclick="finishGame('${g.id}')" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold py-2.5 rounded-lg border border-gray-700 transition">
+                                Terminar e Arquivar Jogo
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            const historyContainer = document.getElementById('history-container');
+            if (appState.history.length === 0) {
+                historyContainer.innerHTML = `<div class="text-gray-500 text-sm italic text-center py-4">Ainda sem histórico de jogos.</div>`;
+            } else {
+                historyContainer.innerHTML = appState.history.map(g => `
+                    <div class="bg-gray-900/50 rounded-lg p-3 border border-gray-800/80 text-sm flex justify-between items-center">
+                        <div class="w-2/5 text-right text-gray-300 truncate pr-2">
+                            ${escapeHtml(getPlayerName(g.t1[0]))} & ${escapeHtml(getPlayerName(g.t1[1]))}
+                        </div>
+                        <div class="w-1/5 text-center font-bold text-base ${g.s1 > g.s2 ? 'text-padel-400' : (g.s1 < g.s2 ? 'text-red-400' : 'text-gray-300')}">
+                            ${g.s1} - ${g.s2}
+                        </div>
+                        <div class="w-2/5 flex items-center justify-between pl-2">
+                            <span class="text-gray-300 truncate">${escapeHtml(getPlayerName(g.t2[0]))} & ${escapeHtml(getPlayerName(g.t2[1]))}</span>
+                            <div class="flex items-center space-x-1 ml-2 flex-shrink-0">
+                                <button onclick="openHistoryModal('${g.id}')" class="p-1 text-gray-400 hover:text-white rounded hover:bg-gray-800 transition" title="Editar Jogo"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                                <button onclick="deleteHistoryGame('${g.id}')" class="p-1 text-gray-400 hover:text-red-400 rounded hover:bg-gray-800 transition" title="Eliminar Jogo"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // --- Renderizar Ranking ---
+        function renderRanking() {
+            const container = document.getElementById('ranking-container');
+            
+            let ranking = appState.players.map(p => {
+                const stats = getPlayerStats(p.id);
+                return { ...p, ...stats };
+            });
+            
+            ranking.sort((a, b) => {
+                if (b.wins !== a.wins) return b.wins - a.wins;
+                if (a.losses !== b.losses) return a.losses - b.losses;
+                if (b.points !== a.points) return b.points - a.points;
+                return a.matches - b.matches;
+            });
+            
+            if (ranking.length === 0) {
+                container.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500 italic">Adiciona jogadores para ver o ranking.</td></tr>`;
+                return;
+            }
+            
+            container.innerHTML = ranking.map((p, idx) => `
+                <tr class="hover:bg-gray-800/60 transition group">
+                    <td class="p-3 font-bold ${idx === 0 ? 'text-amber-400 text-base' : (idx === 1 ? 'text-gray-300 text-base' : (idx === 2 ? 'text-amber-700 text-base' : 'text-gray-500'))}">${idx + 1}º</td>
+                    <td class="p-3 font-medium text-white group-hover:text-padel-400 transition-colors">${escapeHtml(p.name)}</td>
+                    <td class="p-3 text-center text-gray-400">${p.matches}</td>
+                    <td class="p-3 text-center font-bold text-padel-400">${p.wins}</td>
+                    <td class="p-3 text-center font-bold text-red-400">${p.losses}</td>
+                    <td class="p-3 text-center text-gray-300">${p.points}</td>
+                </tr>
+            `).join('');
+        }
+
+        window.onload = () => {
+            loadData();
+        };
+    </script>
+</body>
+</html>
